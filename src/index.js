@@ -33,7 +33,7 @@ const client = new Client({
 });
 
 
-
+const guessedUsers = new Set();
 let dailyChampion = null;
 (async () => {
   dailyChampion = await GetDailyChampion();
@@ -41,79 +41,80 @@ let dailyChampion = null;
 })();
 
 
-schedule.scheduleJob('0 12 * * *', () => {
+schedule.scheduleJob('0 0 * * *', () => {
+  guessedUsers.clear();
   dailyChampion = GetDailyChampion();
 });
 
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
-  schedule.scheduleJob("*0 * * * *", async () => {
-    console.log("Running hour check...");
-    const guilds = client.guilds.cache;
+  // schedule.scheduleJob("*0 * * * *", async () => {
+  //   console.log("Running hour check...");
+  //   const guilds = client.guilds.cache;
 
-    await Promise.all(
-      guilds.map(async (guild) => {
-        const voiceChannels = guild.channels.cache.filter(
-          (channel) => channel.type === ChannelType.GuildVoice
-        );
-        console.log(`Checking guild: ${guild.name}`);
+  //   await Promise.all(
+  //     guilds.map(async (guild) => {
+  //       const voiceChannels = guild.channels.cache.filter(
+  //         (channel) => channel.type === ChannelType.GuildVoice
+  //       );
+  //       console.log(`Checking guild: ${guild.name}`);
 
-        for (const channel of voiceChannels.values()) {
-          console.log(`Checking channel: ${channel.name}`);
-          if (channel.members.size > 0) {
-            channel.members.forEach((member) => {
-              console.log(`Member: ${member.user.tag}`);
-            });
+  //       for (const channel of voiceChannels.values()) {
+  //         console.log(`Checking channel: ${channel.name}`);
+  //         if (channel.members.size > 0) {
+  //           channel.members.forEach((member) => {
+  //             console.log(`Member: ${member.user.tag}`);
+  //           });
 
-            let hours = new Date().getHours();
-            if (hours == 0) {
-              hours = 12;
-            }
-            if (hours > 12) {
-              hours = hours - 12;
-            }
-            for (let i = 0; i < hours; i++) {
-              console.log(`Playing sound for hour ${i + 1}`);
-              await playSound(channel);
-            }
-            console.log(`Disconnecting from channel: ${channel.name}`);
-            disconnectVoiceChannel(channel);
-          } else {
-            console.log(`No members in channel: ${channel.name}`);
-          }
-        }
-      })
-    );
-  });
+  //           let hours = new Date().getHours();
+  //           if (hours == 0) {
+  //             hours = 12;
+  //           }
+  //           if (hours > 12) {
+  //             hours = hours - 12;
+  //           }
+  //           for (let i = 0; i < hours; i++) {
+  //             console.log(`Playing sound for hour ${i + 1}`);
+  //             await playSound(channel);
+  //           }
+  //           console.log(`Disconnecting from channel: ${channel.name}`);
+  //           disconnectVoiceChannel(channel);
+  //         } else {
+  //           console.log(`No members in channel: ${channel.name}`);
+  //         }
+  //       }
+  //     })
+  //   );
+  // });
 
-  schedule.scheduleJob("*/30 * * * *", async () => {
-    console.log(`Half uur`);
-    const guilds = client.guilds.cache;
+  // schedule.scheduleJob("*/30 * * * *", async () => {
+  //   console.log(`Half uur`);
+  //   const guilds = client.guilds.cache;
 
-    for (const guild of guilds.values()) {
-      const voiceChannels = guild.channels.cache.filter(
-        (channel) => channel.type === ChannelType.GuildVoice
-      );
-      console.log(`Checking guild: ${guild.name}`);
+  //   for (const guild of guilds.values()) {
+  //     const voiceChannels = guild.channels.cache.filter(
+  //       (channel) => channel.type === ChannelType.GuildVoice
+  //     );
+  //     console.log(`Checking guild: ${guild.name}`);
 
-      for (const channel of voiceChannels.values()) {
-        console.log(`Checking channel: ${channel.name}`);
-        if (channel.members.size > 0) {
-          console.log(`Found members in channel: ${channel.name}`);
-          channel.members.forEach((member) => {
-            console.log(`Member: ${member.user.tag}`);
-          });
-          await playSound(channel);
-          // Disconnect after playing sounds
-          console.log(`Disconnecting from channel: ${channel.name}`);
-          disconnectVoiceChannel(channel);
-        } else {
-          console.log(`No members in channel: ${channel.name}`);
-        }
-      }
-    }
-  });
+  //     for (const channel of voiceChannels.values()) {
+  //       console.log(`Checking channel: ${channel.name}`);
+  //       if (channel.members.size > 0) {
+  //         console.log(`Found members in channel: ${channel.name}`);
+  //         channel.members.forEach((member) => {
+  //           console.log(`Member: ${member.user.tag}`);
+  //         });
+  //         await playSound(channel);
+  //         // Disconnect after playing sounds
+  //         console.log(`Disconnecting from channel: ${channel.name}`);
+  //         disconnectVoiceChannel(channel);
+  //       } else {
+  //         console.log(`No members in channel: ${channel.name}`);
+  //       }
+  //     }
+  //   }
+  // });
 });
 
 client.on("messageCreate", async (message) => {
@@ -255,21 +256,52 @@ client.on("messageCreate", async (message) => {
   if (message.content.startsWith("!daily")) {
     message.channel.send(`Try to guess the daily champion with !guess`);
   }
+  // if (message.content.startsWith('!guess ')) {
+  //   const guess = message.content.slice(7).trim().toLowerCase();
+  //   const champion = dailyChampion.toLowerCase();
+
+  //   if (guess === champion) {
+  //     message.channel.send(`Congratulations! You guessed the champion: ${dailyChampion}`);
+  //   } else {
+  //     let feedback = '';
+  //     for (let i = 0; i < champion.length; i++) {
+  //       if (guess[i] && guess[i] === champion[i]) {
+  //         feedback += guess[i].toUpperCase();
+  //       } else if (champion.includes(guess[i])) {
+  //         feedback += guess[i];
+  //       } else {
+  //         feedback += '\\_';
+  //       }
+  //     }
+  //     message.channel.send(`Guess feedback: ${feedback}`);
+  //   }
+  // }
+
   if (message.content.startsWith('!guess ')) {
     const guess = message.content.slice(7).trim().toLowerCase();
-    const champion = dailyChampion.toLowerCase();
+    const userId = message.author.id;
 
-    if (guess === champion) {
+    if (guessedUsers.has(userId)) {
+      message.channel.send("You have already guessed the daily champion.");
+      return;
+    }
+
+    if (guess === dailyChampion) {
       message.channel.send(`Congratulations! You guessed the champion: ${dailyChampion}`);
+      guessedUsers.add(userId);
     } else {
       let feedback = '';
-      for (let i = 0; i < champion.length; i++) {
-        if (guess[i] && guess[i] === champion[i]) {
-          feedback += guess[i].toUpperCase();
-        } else if (champion.includes(guess[i])) {
-          feedback += guess[i];
-        } else {
-          feedback += '_';
+      for (let j = 0; j < dailyChampion.length; j++) {
+        let count = 0;
+        for (let i = 0; i < guess.length; i++) {
+          if (guess[i] == dailyChampion[j]) {
+            feedback += guess[i].toUpperCase();
+          } else {
+            count++;
+          }
+          if (count === guess.length) {
+            feedback += '\\_';
+          }
         }
       }
       message.channel.send(`Guess feedback: ${feedback}`);

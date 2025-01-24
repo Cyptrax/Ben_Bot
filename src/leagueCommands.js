@@ -152,7 +152,7 @@ async function fetchRandomChampion() {
   const championKeys = Object.keys(champions);
   const randomChampionKey =
     championKeys[Math.floor(Math.random() * championKeys.length)];
-  return randomChampionKey;
+  return randomChampionKey.toLowerCase();
 }
 
 module.exports = {
