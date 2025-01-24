@@ -14,9 +14,10 @@ const {
   getSkinId,
   getPuuid,
   getMastery,
+  GetDailyChampion,
 } = require("./leagueCommands");
 require("dotenv").config();
-
+const cron = require('node-cron');
 const fs = require("fs");
 const schedule = require("node-schedule");
 const path = require("path");
@@ -29,6 +30,19 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,
   ],
+});
+
+
+
+let dailyChampion = null;
+(async () => {
+  dailyChampion = await GetDailyChampion();
+  console.log(`Daily Champion on start: ${dailyChampion}`);
+})();
+
+
+schedule.scheduleJob('0 12 * * *', () => {
+  dailyChampion = GetDailyChampion();
 });
 
 client.once("ready", () => {
@@ -103,6 +117,8 @@ client.once("ready", () => {
 });
 
 client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+
   if (message.content === "!ping") {
     message.channel.send("Pong!");
   } else if (message.content.toLowerCase() === "!bibel") {
@@ -120,7 +136,32 @@ client.on("messageCreate", async (message) => {
       console.error(`Error reading file: ${err}`);
       message.channel.send("Sorry, I couldn't read the file.");
     }
-  } else if (message.content.toLowerCase() === "!bibel600testdontuse") {
+  }
+  if (message.content === "!yo") {
+    const voiceChannel = message.member.voice.channel;
+
+    if (voiceChannel) {
+      const connection = joinVoiceChannel({
+        channelId: voiceChannel.id,
+        guildId: message.guild.id,
+        adapterCreator: message.guild.voiceAdapterCreator,
+      });
+
+      const player = createAudioPlayer();
+      const resource = createAudioResource(path.join(__dirname, "sounds", 'yo.ogg'));
+
+      player.play(resource);
+      connection.subscribe(player);
+
+      player.on(AudioPlayerStatus.Idle, () => {
+        connection.destroy();
+      });
+    } else {
+      message.reply('You need to be in a voice channel to use this command!');
+    }
+  }
+
+  else if (message.content.toLowerCase() === "!bibel600testdontuse") {
     const filePath = path.join(__dirname, "files", "Bibel.txt");
     try {
       const data = fs.readFileSync(filePath, "utf8");
@@ -210,6 +251,29 @@ client.on("messageCreate", async (message) => {
     const puuid = await getPuuid(message, `${summonerName}`, `${tag}`);
     console.log(`Puuid: ${puuid}`);
     await getMastery(message, puuid, count);
+  }
+  if (message.content.startsWith("!daily")) {
+    message.channel.send(`Try to guess the daily champion with !guess`);
+  }
+  if (message.content.startsWith('!guess ')) {
+    const guess = message.content.slice(7).trim().toLowerCase();
+    const champion = dailyChampion.toLowerCase();
+
+    if (guess === champion) {
+      message.channel.send(`Congratulations! You guessed the champion: ${dailyChampion}`);
+    } else {
+      let feedback = '';
+      for (let i = 0; i < champion.length; i++) {
+        if (guess[i] && guess[i] === champion[i]) {
+          feedback += guess[i].toUpperCase();
+        } else if (champion.includes(guess[i])) {
+          feedback += guess[i];
+        } else {
+          feedback += '_';
+        }
+      }
+      message.channel.send(`Guess feedback: ${feedback}`);
+    }
   }
 });
 

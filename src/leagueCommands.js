@@ -138,8 +138,21 @@ async function getMastery(message, puuid, countId = 3) {
 }
 
 
-async function GetCurrentMatch() {
+async function GetDailyChampion() {
+  let dailyChampion = await fetchRandomChampion();
+  console.log(`Today's champion is: ${dailyChampion}`);
+  return dailyChampion;
+}
 
+async function fetchRandomChampion() {
+  const response = await axios.get(
+    `https://ddragon.leagueoflegends.com/cdn/11.20.1/data/en_US/champion.json`
+  );
+  const champions = response.data.data;
+  const championKeys = Object.keys(champions);
+  const randomChampionKey =
+    championKeys[Math.floor(Math.random() * championKeys.length)];
+  return randomChampionKey;
 }
 
 module.exports = {
@@ -148,4 +161,5 @@ module.exports = {
   getSkinId,
   getPuuid,
   getMastery,
+  GetDailyChampion
 };
