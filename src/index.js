@@ -12,6 +12,8 @@ const {
   getSummonerInfo,
   getChampionImage,
   getSkinId,
+  getPuuid,
+  getMastery,
 } = require("./leagueCommands");
 require("dotenv").config();
 
@@ -32,7 +34,7 @@ const client = new Client({
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
-  schedule.scheduleJob("0 * * * *", async () => {
+  schedule.scheduleJob("*0 * * * *", async () => {
     console.log("Running hour check...");
     const guilds = client.guilds.cache;
 
@@ -46,12 +48,10 @@ client.once("ready", () => {
         for (const channel of voiceChannels.values()) {
           console.log(`Checking channel: ${channel.name}`);
           if (channel.members.size > 0) {
-            console.log(`Found members in channel: ${channel.name}`);
             channel.members.forEach((member) => {
               console.log(`Member: ${member.user.tag}`);
             });
 
-            console.log("test");
             let hours = new Date().getHours();
             if (hours == 0) {
               hours = 12;
@@ -60,11 +60,9 @@ client.once("ready", () => {
               hours = hours - 12;
             }
             for (let i = 0; i < hours; i++) {
-              // Play a sound
               console.log(`Playing sound for hour ${i + 1}`);
               await playSound(channel);
             }
-            // Disconnect after playing sounds
             console.log(`Disconnecting from channel: ${channel.name}`);
             disconnectVoiceChannel(channel);
           } else {
@@ -188,6 +186,30 @@ client.on("messageCreate", async (message) => {
     }
 
     await getChampionImage(message, championName, skin.num);
+  } else if (message.content.startsWith("!mastery")) {
+    const args = message.content.split(" ");
+    if (args.length < 2) {
+      return message.channel.send(
+        "Please provide a summoner name and tag separated by #."
+      );
+    }
+
+    const [summonerName, tag] = args[1].split("#");
+    console.log(`Summoner name: ${summonerName}, tag: ${tag}`);
+    if (!summonerName || !tag) {
+      return message.channel.send(
+        "Please provide a summoner name and tag separated by #."
+      );
+    }
+
+    const count = args.length > 2 ? parseInt(args[2], 10) : 3;
+    if (isNaN(count) || count < 1) {
+      return message.channel.send("Please provide a valid number of champions.");
+    }
+
+    const puuid = await getPuuid(message, `${summonerName}`, `${tag}`);
+    console.log(`Puuid: ${puuid}`);
+    await getMastery(message, puuid, count);
   }
 });
 
