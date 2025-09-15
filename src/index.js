@@ -49,39 +49,43 @@ schedule.scheduleJob('0 0 * * *', () => {
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
 
-  // schedule.scheduleJob("*0 * * * *", async () => {
+  // schedule.scheduleJob("0 * * * *", async () => {
   //   console.log("Running hour check...");
   //   const guilds = client.guilds.cache;
 
+  //   // We’ll iterate through each guild in parallel
   //   await Promise.all(
   //     guilds.map(async (guild) => {
   //       const voiceChannels = guild.channels.cache.filter(
-  //         (channel) => channel.type === ChannelType.GuildVoice
+  //         (ch) => ch.type === ChannelType.GuildVoice
   //       );
   //       console.log(`Checking guild: ${guild.name}`);
 
   //       for (const channel of voiceChannels.values()) {
   //         console.log(`Checking channel: ${channel.name}`);
+
   //         if (channel.members.size > 0) {
+  //           // Log each member for debugging
   //           channel.members.forEach((member) => {
-  //             console.log(`Member: ${member.user.tag}`);
+  //             console.log(` ○ Member in ${channel.name}: ${member.user.tag}`);
   //           });
 
-  //           let hours = new Date().getHours();
-  //           if (hours == 0) {
-  //             hours = 12;
-  //           }
-  //           if (hours > 12) {
-  //             hours = hours - 12;
-  //           }
+  //           // Calculate “hours” in 12-hour format
+  //           let hours = new Date().getHours(); // server’s local time
+  //           if (hours === 0) hours = 12;
+  //           else if (hours > 12) hours = hours - 12;
+
+  //           // Play the “bong” X times
   //           for (let i = 0; i < hours; i++) {
-  //             console.log(`Playing sound for hour ${i + 1}`);
+  //             console.log(`► Playing sound instance #${i + 1} in ${channel.name}`);
   //             await playSound(channel);
+  //             // note: playSound should return a Promise that resolves when the sound finishes
   //           }
-  //           console.log(`Disconnecting from channel: ${channel.name}`);
+
+  //           console.log(`→ Disconnecting from ${channel.name}`);
   //           disconnectVoiceChannel(channel);
   //         } else {
-  //           console.log(`No members in channel: ${channel.name}`);
+  //           console.log(`— No members in channel: ${channel.name}`);
   //         }
   //       }
   //     })
@@ -138,7 +142,30 @@ client.on("messageCreate", async (message) => {
       message.channel.send("Sorry, I couldn't read the file.");
     }
   }
-  if (message.content === "!yo") {
+  else if (message.content === "!HELLO") {
+    const voiceChannel = message.member.voice.channel;
+
+    if (voiceChannel) {
+      const connection = joinVoiceChannel({
+        channelId: voiceChannel.id,
+        guildId: message.guild.id,
+        adapterCreator: message.guild.voiceAdapterCreator,
+      });
+
+      const player = createAudioPlayer();
+      const resource = createAudioResource(path.join(__dirname, "sounds", 'Oh_Hello_There_Shrek.mp3'));
+
+      player.play(resource);
+      connection.subscribe(player);
+
+      player.on(AudioPlayerStatus.Idle, () => {
+        connection.destroy();
+      });
+    } else {
+      message.reply('You need to be in a voice channel to use this command!');
+    }
+  }
+  else if (message.content === "!yo") {
     const voiceChannel = message.member.voice.channel;
 
     if (voiceChannel) {
@@ -166,7 +193,7 @@ client.on("messageCreate", async (message) => {
     const filePath = path.join(__dirname, "files", "Bibel.txt");
     try {
       const data = fs.readFileSync(filePath, "utf8");
-      const chunks = data.match(/[\s\S]{1,2000}/g); // Split the data into chunks of 2000 characters
+      const chunks = data.match(/[\s\S]{1,2000}/g);
       for (const chunk of chunks) {
         await message.channel.send(chunk);
       }
@@ -256,26 +283,26 @@ client.on("messageCreate", async (message) => {
   if (message.content.startsWith("!daily")) {
     message.channel.send(`Try to guess the daily champion with !guess`);
   }
-  // if (message.content.startsWith('!guess ')) {
-  //   const guess = message.content.slice(7).trim().toLowerCase();
-  //   const champion = dailyChampion.toLowerCase();
+  if (message.content.startsWith('!guess ')) {
+    const guess = message.content.slice(7).trim().toLowerCase();
+    const champion = dailyChampion.toLowerCase();
 
-  //   if (guess === champion) {
-  //     message.channel.send(`Congratulations! You guessed the champion: ${dailyChampion}`);
-  //   } else {
-  //     let feedback = '';
-  //     for (let i = 0; i < champion.length; i++) {
-  //       if (guess[i] && guess[i] === champion[i]) {
-  //         feedback += guess[i].toUpperCase();
-  //       } else if (champion.includes(guess[i])) {
-  //         feedback += guess[i];
-  //       } else {
-  //         feedback += '\\_';
-  //       }
-  //     }
-  //     message.channel.send(`Guess feedback: ${feedback}`);
-  //   }
-  // }
+    if (guess === champion) {
+      message.channel.send(`Congratulations! You guessed the champion: ${dailyChampion}`);
+    } else {
+      let feedback = '';
+      for (let i = 0; i < champion.length; i++) {
+        if (guess[i] && guess[i] === champion[i]) {
+          feedback += guess[i].toUpperCase();
+        } else if (champion.includes(guess[i])) {
+          feedback += guess[i];
+        } else {
+          feedback += '\\_';
+        }
+      }
+      message.channel.send(`Guess feedback: ${feedback}`);
+    }
+  }
 
   if (message.content.startsWith('!guess ')) {
     const guess = message.content.slice(7).trim().toLowerCase();
